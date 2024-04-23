@@ -21,15 +21,15 @@ from webdriver_manager.chrome import ChromeDriverManager
 from src.extract.job import JobDataExtractor
 
 
-class LinkedinScraper:
-    def __init__(self, session=".session") -> None:
+class JobSearchScraper:
+    def __init__(self, session=".session", headless=False) -> None:
         self.session = session
         self.domain = "https://www.linkedin.com"
 
         self.options = Options()
 
         # Headless
-        self.options.headLessess = False
+        self.options.headLessess = headless
         # self.options.add_argument("--headless=new")
         # self.options.add_argument("window-size=430,2160")
         self.options.add_argument("window-size=1920,1080")
@@ -79,12 +79,8 @@ class LinkedinScraper:
         print("Sessão criada")
         self.driver = driver
 
-    def job_details(self):
-        job_cards = self.driver.find_elements(
-            By.CLASS_NAME, "jobs-search-results__list-item"
-        )
-
     def search_job(self, job_name: str = "Engenharia de dados"):
+        dataset = []
         # self.options.add_argument("--headless=new")
         # self.options.add_argument(f"--user-data-dir={self.session}")
         # driver = webdriver.Chrome(service=self.service, options=self.options)
@@ -102,7 +98,7 @@ class LinkedinScraper:
                 (By.XPATH, "//input[starts-with(@id,'jobs-search-box-keyword-id')]")
             )
         )
-        search_input.send_keys("Engenharia de dados")
+        search_input.send_keys(job_name)
         sleep(1)
         search_input.send_keys(Keys.ENTER)
         sleep(4)
@@ -118,9 +114,9 @@ class LinkedinScraper:
             )
 
             # Iterando nos cards de jobs
-            print("cards", len(job_cards))
-            for i, card in enumerate(job_cards[:1]):
-
+            # print("cards", len(job_cards))
+            for card in job_cards[:1]:
+                sleep(2)
                 card.click()
                 # print(f"card [{i}]...")
 
@@ -130,10 +126,11 @@ class LinkedinScraper:
                 sleep(2)  # Tempo para carregar a página
                 job_url = self.driver.current_url
                 data_extractor = JobDataExtractor(job_url)
-                print("ID: ", data_extractor.get_id())
+                # print("ID: ", data_extractor.get_id())
 
                 ## Detalhes
-                job_details = WebDriverWait(self.driver, 3).until(
+
+                job_details = WebDriverWait(self.driver, 5).until(
                     EC.presence_of_element_located(
                         (By.CLASS_NAME, "jobs-search__job-details")
                     )
@@ -141,10 +138,11 @@ class LinkedinScraper:
                 job_details_data = data_extractor.add_details(
                     job_details.get_attribute("innerHTML")
                 )
-                print(job_details_data)
+                # print(job_details_data)
 
                 ## Skills
                 ### Navegar | Abrir popup
+                sleep(2)
                 WebDriverWait(self.driver, 3).until(
                     EC.presence_of_element_located((By.XPATH, "//a[@href='#HYM']"))
                 ).click()  # Link superior
@@ -173,7 +171,7 @@ class LinkedinScraper:
                 job_skills_data = data_extractor.add_skills(
                     job_skills.get_attribute("innerHTML")
                 )
-                print(job_skills_data)
+                # print(job_skills_data)
 
                 ### Fecha popup
                 WebDriverWait(self.driver, 3).until(
@@ -182,7 +180,7 @@ class LinkedinScraper:
                     )
                 ).click()  # Fecha popup
 
-                data_extractor.save()
+                dataset.append(data_extractor.save())
 
             pages_btn = WebDriverWait(self.driver, 3).until(
                 EC.presence_of_all_elements_located(
@@ -190,20 +188,29 @@ class LinkedinScraper:
                 )
             )
 
-            print("pages len:", len(pages_btn))
+            # print("pages len:", len(pages_btn))
             for page in pages_btn:
                 if page.text == str(next_page) or page.text == "...":
-                    print("página:", page.text)
                     page.click()
                     break
             next_page += 1
 
-        print("FIM??")
+        return dataset
 
 
 if __name__ == "__main__":
-    bot = LinkedinScraper()
-    email = "linkedin@mylab.dev.br"
-    password = "minhamarionete"
+    from dotenv import load_dotenv
+    import pandas as pd
+
+    load_dotenv()
+
+    bot = JobSearchScraper()
+    email = os.environ["LINKEDIN_EMAIL"]
+    password = os.environ["LINKEDIN_PASSWORD"]
     bot.autenticate(email=email, password=password)
-    bot.search_job()
+    dataset = bot.search_job(job_name="Engenharia de dados")
+
+    # print(dataset)
+    df = pd.DataFrame(dataset)
+    df.to_csv("jobs.csv")
+    print("CSV salvo!")
