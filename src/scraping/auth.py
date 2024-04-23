@@ -18,6 +18,8 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+from src.extract.job import JobDataExtractor
+
 
 class LinkedinScraper:
     def __init__(self, session=".session") -> None:
@@ -107,7 +109,7 @@ class LinkedinScraper:
 
         # Navegação pelas páginas
         max_pages = 10
-        next_page = 1
+        next_page = 2
         while next_page < max_pages:
             job_cards = WebDriverWait(self.driver, 5).until(
                 EC.presence_of_all_elements_located(
@@ -118,16 +120,17 @@ class LinkedinScraper:
             # Iterando nos cards de jobs
             print("cards", len(job_cards))
             for i, card in enumerate(job_cards[:1]):
-                card.click()
-                print(f"card [{i}]...")
-                # page_content = self.driver.page_source
-                # print(page_content)
 
+                card.click()
+                # print(f"card [{i}]...")
+
+                # =====================================
                 # Início da captura dados sobre o job
                 ## Url | Id
                 sleep(2)  # Tempo para carregar a página
                 job_url = self.driver.current_url
-                job_id = job_url.split("currentJobId=")[-1].split("&")[0]
+                data_extractor = JobDataExtractor(job_url)
+                print("ID: ", data_extractor.get_id())
 
                 ## Detalhes
                 job_details = WebDriverWait(self.driver, 3).until(
@@ -135,46 +138,54 @@ class LinkedinScraper:
                         (By.CLASS_NAME, "jobs-search__job-details")
                     )
                 )
-                print(job_details.text)
+                job_details_data = data_extractor.add_details(
+                    job_details.get_attribute("innerHTML")
+                )
+                print(job_details_data)
 
                 ## Skills
                 ### Navegar | Abrir popup
-                self.driver.find_element(By.XPATH, "//a[@href='#HYM']").click()
-                sleep(2)
-                botao = self.driver.find_element(By.XPATH, "//a[@href='#']")
-                botao.click()
+                WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located((By.XPATH, "//a[@href='#HYM']"))
+                ).click()  # Link superior
 
-                input("Continuar?")
+                # input("stop: ")
+                sleep(2)
+                WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located((By.XPATH, "//a[@href='#']"))
+                ).click()  # Abre popup
+
+                # WebDriverWait(self.driver, 3).until(
+                #     EC.presence_of_element_located(
+                #         (
+                #             By.XPATH,
+                #             "//span[contains(text(), 'Exibir todas as competências')]",
+                #         )
+                #     )
+                # ).parent.click()  # Abre popup
+
                 ### Skills
                 sleep(2)  # Tempo para carregar a página
-                job_skills = self.driver.find_element(By.ID, "artdeco-modal-outlet")
-                print(job_skills.text)
+                job_skills = WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located((By.ID, "artdeco-modal-outlet"))
+                )
+                # job_skills = self.driver.find_element(By.ID, "artdeco-modal-outlet")
+                job_skills_data = data_extractor.add_skills(
+                    job_skills.get_attribute("innerHTML")
+                )
+                print(job_skills_data)
 
-                ### Fechar popup
-                self.driver.find_element(
-                    By.XPATH, "//button[@aria-label='Fechar']"
-                ).click()
+                ### Fecha popup
+                WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located(
+                        (By.XPATH, "//button[@aria-label='Fechar']")
+                    )
+                ).click()  # Fecha popup
 
-                # # self.driver.find_element(By.XPATH, "//button[starts-with(@id,'ember')]").click()
-
-                # self.driver.execute_script("arguments[0].scroll(0, 0);", job_details)
-
-                # # input("Verificar skills retornar")
-
-                # back_button = WebDriverWait(self.driver, 5).until(
-                #     EC.presence_of_element_located((By.CLASS_NAME, "scaffold-layout__detail-back-button"))
-                # )
-                # # self.driver.execute_script("window.scrollTo(0, 0);")
-
-                # # scaffold-layout__detail
-                # # overflow-x-hidden jobs-search__job-details
-                # # scaffold-layout__detail--is-active
-
-                # # Retorna a página de jobs
-                # back_button.click()
+                data_extractor.save()
 
             pages_btn = WebDriverWait(self.driver, 3).until(
-                EC.presence_of_element_located(
+                EC.presence_of_all_elements_located(
                     (By.CLASS_NAME, "artdeco-pagination__indicator--number")
                 )
             )
@@ -187,7 +198,7 @@ class LinkedinScraper:
                     break
             next_page += 1
 
-        input("Pause 2...")
+        print("FIM??")
 
 
 if __name__ == "__main__":

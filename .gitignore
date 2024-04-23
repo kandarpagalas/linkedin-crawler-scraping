@@ -2,5 +2,9 @@ venv
 .env
 .session
 .DS_Store
-*.ipynb
 __pycache__
+*.html
+
+#Jupyter notebooks
+.ipynb_checkpoints
+*.ipynb
