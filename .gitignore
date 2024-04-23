@@ -1,0 +1,6 @@
+venv
+.env
+.session
+.DS_Store
+*.ipynb
+__pycache__
