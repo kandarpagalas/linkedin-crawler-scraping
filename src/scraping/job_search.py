@@ -29,19 +29,18 @@ class JobSearchScraper:
         self.options = Options()
 
         # Headless
-        self.options.headLessess = headless
-        # self.options.add_argument("--headless=new")
-        # self.options.add_argument("window-size=430,2160")
+        if headless:
+            self.options.add_argument("--headless=new")
+            self.options.add_argument("window-size=2160,3840")
         self.options.add_argument("window-size=1920,1080")
+        # self.options.add_argument("window-size=3840,2160")
 
         # Session
         if not os.path.isdir(session):
             os.makedirs(session)
 
         self.options.add_argument(f"--user-data-dir={self.session}")
-
         self.service = Service(ChromeDriverManager().install())
-
         self.driver = None
 
     def autenticate(self, email=None, password=None):
@@ -53,6 +52,7 @@ class JobSearchScraper:
             driver.find_element(By.XPATH, "//a[contains(text(), 'Sign in')]")
         except NoSuchElementException:
             self.driver = driver
+            sleep(5)
             return
 
         # Inserindo email
@@ -79,11 +79,9 @@ class JobSearchScraper:
         print("Sessão criada")
         self.driver = driver
 
-    def search_job(self, job_name: str = "Engenharia de dados"):
+    def search_job_ids(self, job_name: str = "Engenharia de dados", max_pages=3):
         dataset = []
-        # self.options.add_argument("--headless=new")
-        # self.options.add_argument(f"--user-data-dir={self.session}")
-        # driver = webdriver.Chrome(service=self.service, options=self.options)
+        id_dataset = []
 
         if self.driver is None:
             print("You need to authenticate before doing search")
@@ -91,6 +89,7 @@ class JobSearchScraper:
 
         endpoint = self.domain + "/jobs"
         self.driver.get(endpoint)
+        sleep(5)
 
         # Entrada dos termos de pesquisa
         search_input = WebDriverWait(self.driver, 5).until(
@@ -101,86 +100,38 @@ class JobSearchScraper:
         search_input.send_keys(job_name)
         sleep(1)
         search_input.send_keys(Keys.ENTER)
-        sleep(4)
 
         # Navegação pelas páginas
-        max_pages = 10
         next_page = 2
+        last_page = 0
         while next_page < max_pages:
+            sleep(3)
+            print(f"Página: {next_page - 1}")
+            # Encontra os cards com as vagas
             job_cards = WebDriverWait(self.driver, 5).until(
                 EC.presence_of_all_elements_located(
                     (By.CLASS_NAME, "jobs-search-results__list-item")
                 )
             )
+            for card in job_cards:
+                id_dataset.append(card.get_attribute("data-occludable-job-id"))
+            # input("Continue?")
 
             # Iterando nos cards de jobs
             # print("cards", len(job_cards))
-            for card in job_cards[:1]:
-                sleep(2)
-                card.click()
-                # print(f"card [{i}]...")
+            # for card in job_cards:
+            #     sleep(2)
+            #     card.click()
 
-                # =====================================
-                # Início da captura dados sobre o job
-                ## Url | Id
-                sleep(2)  # Tempo para carregar a página
-                job_url = self.driver.current_url
-                data_extractor = JobDataExtractor(job_url)
-                # print("ID: ", data_extractor.get_id())
+            #     # =====================================
+            #     # Início da captura dados sobre o job
+            #     ## Url | Id
+            #     sleep(2)  # Tempo para carregar a página
+            #     job_url = self.driver.current_url
+            #     data_extractor = JobDataExtractor(job_url)
+            #     # print("ID: ", data_extractor.get_id())
 
-                ## Detalhes
-
-                job_details = WebDriverWait(self.driver, 5).until(
-                    EC.presence_of_element_located(
-                        (By.CLASS_NAME, "jobs-search__job-details")
-                    )
-                )
-                job_details_data = data_extractor.add_details(
-                    job_details.get_attribute("innerHTML")
-                )
-                # print(job_details_data)
-
-                ## Skills
-                ### Navegar | Abrir popup
-                sleep(2)
-                WebDriverWait(self.driver, 3).until(
-                    EC.presence_of_element_located((By.XPATH, "//a[@href='#HYM']"))
-                ).click()  # Link superior
-
-                # input("stop: ")
-                sleep(2)
-                WebDriverWait(self.driver, 3).until(
-                    EC.presence_of_element_located((By.XPATH, "//a[@href='#']"))
-                ).click()  # Abre popup
-
-                # WebDriverWait(self.driver, 3).until(
-                #     EC.presence_of_element_located(
-                #         (
-                #             By.XPATH,
-                #             "//span[contains(text(), 'Exibir todas as competências')]",
-                #         )
-                #     )
-                # ).parent.click()  # Abre popup
-
-                ### Skills
-                sleep(2)  # Tempo para carregar a página
-                job_skills = WebDriverWait(self.driver, 3).until(
-                    EC.presence_of_element_located((By.ID, "artdeco-modal-outlet"))
-                )
-                # job_skills = self.driver.find_element(By.ID, "artdeco-modal-outlet")
-                job_skills_data = data_extractor.add_skills(
-                    job_skills.get_attribute("innerHTML")
-                )
-                # print(job_skills_data)
-
-                ### Fecha popup
-                WebDriverWait(self.driver, 3).until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, "//button[@aria-label='Fechar']")
-                    )
-                ).click()  # Fecha popup
-
-                dataset.append(data_extractor.save())
+            #     ## Skills
 
             pages_btn = WebDriverWait(self.driver, 3).until(
                 EC.presence_of_all_elements_located(
@@ -188,27 +139,131 @@ class JobSearchScraper:
                 )
             )
 
-            # print("pages len:", len(pages_btn))
-            for page in pages_btn:
-                if page.text == str(next_page) or page.text == "...":
+            for i, page in enumerate(pages_btn):
+                if page.text == str(next_page):
+                    print(last_page, "-->", page.text)
+                    last_page = page.text
                     page.click()
+                    break
+
+                if page.text == "…" and i > 2:
+                    print("… --> mais páginas")
+                    page.click()
+                    next_page -= 1
+                    sleep(2)
                     break
             next_page += 1
 
-        return dataset
+        return id_dataset
+
+    def retrive_job_data(self, job_id):
+        data_extractor = JobDataExtractor(job_id)
+        if self.driver is None:
+            print("You need to authenticate before retriving data")
+            return
+
+        endpoint = self.domain + "/jobs/view/" + job_id
+        self.driver.get(endpoint)
+        sleep(3)
+
+        # Expandir sessão "Ver mais"
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located(
+                (
+                    By.CSS_SELECTOR,
+                    "button[aria-label='Clicar para ver mais detalhes']",
+                )
+            )
+        ).click()
+
+        # ## Detalhes
+        detalhes = data_extractor.details(self.driver.page_source)
+        # print(detalhes)
+
+        ## Skills
+        try:
+            ### Navegar | Abrir popup
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.XPATH, "//a[@href='#HYM']"))
+            ).click()  # Link superior
+
+            sleep(2)
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.XPATH, "//a[@href='#']"))
+            ).click()  # Abre popup
+
+            ### Skills
+            sleep(2)  # Tempo para carregar a página
+            job_skills = WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.ID, "artdeco-modal-outlet"))
+            )
+            # job_skills = self.driver.find_element(By.ID, "artdeco-modal-outlet")
+            job_skills_data = data_extractor.skills(
+                job_skills.get_attribute("innerHTML")
+            )
+
+            detalhes["skills"] = job_skills_data
+            # print(job_skills_data)
+
+            ### Fecha popup
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//button[@aria-label='Fechar']")
+                )
+            ).click()  # Fecha popup
+
+        except Exception as e:
+            print(e)
+            job_data = data_extractor.save()
+            print("-", job_data["id"])
+
+        detalhes["id"] = job_id
+        detalhes["url"] = endpoint
+
+        # WebDriverWait(self.driver, 5).until(
+        #     EC.presence_of_element_located(
+        #         (
+        #             By.CLASS_NAME,
+        #             "job-details-how-you-match__skills-item-subtitle",
+        #         )
+        #     )
+        # ).click()
+
+        return detalhes
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     import pandas as pd
+    from random import shuffle
 
     load_dotenv()
 
-    bot = JobSearchScraper()
+    bot = JobSearchScraper(headless=True)
     email = os.environ["LINKEDIN_EMAIL"]
     password = os.environ["LINKEDIN_PASSWORD"]
     bot.autenticate(email=email, password=password)
-    dataset = bot.search_job(job_name="Engenharia de dados")
+    # id_dataset = bot.search_job_ids(job_name="Engenharia de dados")
+
+    id_dataset = [
+        "3906678509",
+        "3871159643",
+        "3894277050",
+        "3749314307",
+        "3884248793",
+        "3865842702",
+        "3879398354",
+        "3907132071",
+        "3838683554",
+        "3896037368",
+    ]
+
+    shuffle(id_dataset)
+    dataset = []
+    for _id in id_dataset:
+        data = bot.retrive_job_data(_id)
+        dataset.append(data)
+        print(data["id"], data["url"])
 
     # print(dataset)
     df = pd.DataFrame(dataset)
