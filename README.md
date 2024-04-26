@@ -60,8 +60,8 @@ export PYTHONPATH="$PYTHONPATH:$PWD"
 Arquivo ```data/jobs.csv``` contendo informações sobre as vagas coletadas
 
 
-## Análises
-As análises podem ser verificadas no notebook ```Analise.ipynb```
+## Recuperação de informação
+As análises podem ser verificadas no notebook ```recuperacao_de_informacao.ipynb```
 
 #### Analise de similaridade 
 Utilisa o algorítimo de Similaridade TF-IDF para a comparar o conteúdo da sessão SOBRE de um perfil do linkedin e as descrições das vagas em aberto. 
