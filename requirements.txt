@@ -1,4 +1,12 @@
+jupyterlab
 selenium
+webdriver_manager
 beautifulsoup4
 sqlalchemy
 python-dotenv
+pandas
+nltk
+setuptools
+wheel
+spacy
+scikit-learn

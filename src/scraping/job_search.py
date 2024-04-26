@@ -1,23 +1,22 @@
 import os
-import re
 from time import sleep
+
+# Selenium start driver
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
-
-
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-# Exceptions
-from selenium.common.exceptions import NoSuchElementException
-
-
-# Starting/Stopping Driver: can specify ports or location but not remote access
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+# Selenium ellement tools
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# Selenium Exceptions
+from selenium.common.exceptions import NoSuchElementException
+
+# My packages
 from src.extract.job import JobDataExtractor
 
 
@@ -80,7 +79,7 @@ class JobSearchScraper:
         self.driver = driver
 
     def search_job_ids(self, job_name: str = "Engenharia de dados", max_pages=3):
-        dataset = []
+        print("Start collecting ids")
         id_dataset = []
 
         if self.driver is None:
@@ -89,10 +88,10 @@ class JobSearchScraper:
 
         endpoint = self.domain + "/jobs"
         self.driver.get(endpoint)
-        sleep(5)
+        sleep(4)
 
         # Entrada dos termos de pesquisa
-        search_input = WebDriverWait(self.driver, 5).until(
+        search_input = WebDriverWait(self.driver, 3).until(
             EC.presence_of_element_located(
                 (By.XPATH, "//input[starts-with(@id,'jobs-search-box-keyword-id')]")
             )
@@ -106,7 +105,6 @@ class JobSearchScraper:
         last_page = 0
         while next_page < max_pages:
             sleep(3)
-            print(f"Página: {next_page - 1}")
             # Encontra os cards com as vagas
             job_cards = WebDriverWait(self.driver, 5).until(
                 EC.presence_of_all_elements_located(
@@ -115,23 +113,6 @@ class JobSearchScraper:
             )
             for card in job_cards:
                 id_dataset.append(card.get_attribute("data-occludable-job-id"))
-            # input("Continue?")
-
-            # Iterando nos cards de jobs
-            # print("cards", len(job_cards))
-            # for card in job_cards:
-            #     sleep(2)
-            #     card.click()
-
-            #     # =====================================
-            #     # Início da captura dados sobre o job
-            #     ## Url | Id
-            #     sleep(2)  # Tempo para carregar a página
-            #     job_url = self.driver.current_url
-            #     data_extractor = JobDataExtractor(job_url)
-            #     # print("ID: ", data_extractor.get_id())
-
-            #     ## Skills
 
             pages_btn = WebDriverWait(self.driver, 3).until(
                 EC.presence_of_all_elements_located(
@@ -141,13 +122,13 @@ class JobSearchScraper:
 
             for i, page in enumerate(pages_btn):
                 if page.text == str(next_page):
-                    print(last_page, "-->", page.text)
+                    print("GO -->", page.text)
                     last_page = page.text
                     page.click()
                     break
 
                 if page.text == "…" and i > 2:
-                    print("… --> mais páginas")
+                    print("EXPAND --> mais páginas")
                     page.click()
                     next_page -= 1
                     sleep(2)
@@ -164,10 +145,10 @@ class JobSearchScraper:
 
         endpoint = self.domain + "/jobs/view/" + job_id
         self.driver.get(endpoint)
-        sleep(3)
+        sleep(2)
 
         # Expandir sessão "Ver mais"
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, 3).until(
             EC.presence_of_element_located(
                 (
                     By.CSS_SELECTOR,
@@ -176,9 +157,8 @@ class JobSearchScraper:
             )
         ).click()
 
-        # ## Detalhes
+        ## Detalhes
         detalhes = data_extractor.details(self.driver.page_source)
-        # print(detalhes)
 
         ## Skills
         try:
@@ -214,8 +194,6 @@ class JobSearchScraper:
 
         except Exception as e:
             print(e)
-            job_data = data_extractor.save()
-            print("-", job_data["id"])
 
         detalhes["id"] = job_id
         detalhes["url"] = endpoint

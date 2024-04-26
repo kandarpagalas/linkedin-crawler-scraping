@@ -1,4 +1,3 @@
-import os
 import re
 from bs4 import BeautifulSoup
 
@@ -9,9 +8,6 @@ class JobDataExtractor:
 
         self.url = url
         self.id = url.split("currentJobId=")[-1].split("&")[0]
-        # self.folder = f"./data/{self.id}/"
-        # if not os.path.isdir(self.folder):
-        #     os.makedirs(self.folder)
 
         self.data["id"] = url.split("currentJobId=")[-1].split("&")[0]
         self.data["url"] = url
@@ -84,13 +80,7 @@ class JobDataExtractor:
             divs = div_tag.div.find_all("div")
             skills.append(divs[1].text.strip())
 
-        return skills
-
-    def save(self):
-        # print("\n------------- saving ---------------\n")
-        # print(self.data)
-        # print("\n-------------- DONE ----------------\n")
-        return self.data
+        return ";".join(skills)
 
 
 if __name__ == "__main__":

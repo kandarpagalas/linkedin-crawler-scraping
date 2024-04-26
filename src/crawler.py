@@ -12,10 +12,11 @@ load_dotenv()
 def find_jobs(
     subject,
     headless=True,
-    max_pages=20,
+    max_pages=1,
     csv_output="data/jobs.csv",
     session_folder=".session",
 ):
+
     email = os.environ["LINKEDIN_EMAIL"]
     password = os.environ["LINKEDIN_PASSWORD"]
 
@@ -23,32 +24,36 @@ def find_jobs(
     bot.autenticate(email=email, password=password)
     id_dataset = bot.search_job_ids(job_name=subject, max_pages=max_pages)
 
-    # with open("adta/id_dataset.txt", "w", encoding="utf-8") as f:
-    #     for _id in id_dataset:
-    #         f.write(_id)
-
+    print("Start retrieving jobs data")
+    total = len(id_dataset)
     dataset = []
-    for _id in id_dataset:
-        print(_id)
+
+    for i, _id in enumerate(id_dataset):
         try:
             data = bot.retrive_job_data(_id)
             dataset.append(data)
-            print("--", data["url"])
-        except Exception as e:
-            print("--", e)
+            url = data["url"]
+            log_str = f"{i}/{total} OK {url}"
+            print(log_str)
+        except Exception:
+            log_str = f"{i}/{total} OK {_id}"
+            print(log_str)
 
     df = pd.DataFrame(dataset)
     df.to_csv(csv_output)
-    print("CSV salvo!")
+    print(f"CSV disponível em: {csv_output}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser = argparse.ArgumentParser(
+        description="Executar um crawler que coleta dados sobre vagas no linkedin"
+    )
     parser.add_argument(
         "subject",
         # required=False,
         help="Termo que deve ser pesquisado",
     )
+    # --headless
     parser.add_argument(
         "--headless",
         required=False,
@@ -58,6 +63,7 @@ if __name__ == "__main__":
         default=False,
         help="Termo que deve ser pesquisado",
     )
+    # --max_pages
     parser.add_argument(
         "--max_pages",
         required=False,
@@ -66,6 +72,7 @@ if __name__ == "__main__":
         default=20,
         help="Limite de páginas visitadas durante a busca",
     )
+    # --output
     parser.add_argument(
         "--output",
         required=False,
@@ -74,6 +81,7 @@ if __name__ == "__main__":
         default="data/jobs.csv",
         help="Para definir onde o arquivo de output deve ser salvo",
     )
+    # --session
     parser.add_argument(
         "--session",
         required=False,
@@ -83,17 +91,7 @@ if __name__ == "__main__":
         help="Para definir onde fica a pasta da sessão",
     )
 
-    #     headless=True,
-    # max_pages=40,
-    # csv_output="data/jobs.csv",
-    # session_folder=".session",
-
     args = parser.parse_args()
-    print(args.subject)
-    print(args.headless)
-    print(args.max_pages)
-    print(args.output)
-    print(args.session)
 
     # find_jobs(args.subject.strip())
     find_jobs(
@@ -103,3 +101,5 @@ if __name__ == "__main__":
         csv_output=args.output,
         session_folder=args.session,
     )
+
+    # python src/crawler.py "Engenharia de dados" --headless --output="data/eng_de_dados.csv"
