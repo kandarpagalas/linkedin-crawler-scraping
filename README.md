@@ -19,7 +19,7 @@ Retornando um DataFrame com as vagas ordenadas de forma decrescente pela similar
 Implementa um contador de palavras para ordenar, de acordo com a contagem, as skills que mais apareceram nas vagas em aberto.
 
 ## Executar em sua máquina
-### Clonando repositório e instalando requisitos
+#### Clonando repositório e instalando requisitos
 ```bash
 # Clone o repositório
 git clone https://github.com/kandarpagalas/trabalho_final_web_mining_crawler_scraping.git
