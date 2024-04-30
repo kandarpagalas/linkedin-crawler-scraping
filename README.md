@@ -32,7 +32,7 @@ scikit-learn
 ```
 ##### Instale as dependências
 ```
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 
@@ -44,11 +44,11 @@ pip install -r requirements
 ```bash
 python src/crawler.py "Engenharia de dados" [options]
 ```
-##### Opções:
-```--headless``` para rodar em modo headless
-```--max_pages=20``` Limite de páginas visitadas durante a busca. Padrão ```20```
-```--output="caminho/para/o/arquivo.csv"``` Para modificar onde o arquivo de output deve ser salvo. Padrão ```./data/jobs.csv```
-```--session="caminho/para/a/pasta/"``` Para definir onde fica a pasta da sessão. Padrão ```./.session/```
+##### Opções (não é necessário usar):
+* ```--headless``` Modo headless.
+* ```--max_pages=20``` Limite de páginas visitadas.
+* ```--output="./data/jobs.csv"``` Arquivo de output.
+* ```--session="./.session/"``` Pasta com arquivos da sessão.
 
 ##### Obs.: Corrigir Exception ```ModuleNotFoundError: No module named 'src'```
 ```bash
